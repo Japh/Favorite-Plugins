@@ -28,8 +28,8 @@ License: GPL2
 /**
  * Favorite Plugins
  *
- * Quickly and easily access and install your favorite plugins.
- * Because... they're your favorites!
+ * Quickly and easily access and install your favorited plugins from
+ * WordPress.org, right from your dashboard.
  *
  * @package JaphFavoritePlugins
  * @author Japh <wordpress@japh.com.au>
@@ -67,6 +67,8 @@ if ( ! defined( 'JFP_PLUGIN_FILE' ) ) {
 class Japh_Favorite_Plugins {
 
 	public $version = '0.1';
+	public $username = null;
+	public $favorite_plugins = null;
 
 	/**
 	 * Constructor for the plugin's main class
@@ -76,23 +78,26 @@ class Japh_Favorite_Plugins {
 	function __construct() {
 
 		add_action( 'init', array( &$this, 'textdomain' ) );
-		/**
-		 * @todo Implement or remove
-		 */
 		add_action( 'admin_init', array( &$this, 'load_libraries' ) );
-		add_action( 'admin_enqueue_scripts', array( &$this, 'register_scripts_and_styles' ) );
 		add_filter( 'install_plugins_tabs', array( &$this, 'add_favorites_tab' ) );
 		add_action( 'install_plugins_favorites', array( &$this, 'do_favorites_tab' ) );
-		add_action( 'wp_ajax_get_favorites', array( &$this, 'get_favorites' ) );
+
+		$this->username = get_option( 'jfp_favorite_user' );
+		$this->favorite_plugins = get_option( 'jfp_favorite_plugins' );
 
 	}
 
 	/**
-	 * @todo Implement or remove
+	 * Loads any 3rd-party libraries the plugin utilises
+	 *
+	 * This function will load in any libraries used by the plugin, currently:
+	 *  + PHP Simple HTML DOM Parser
+	 *
+	 * @since 0.1
 	 */
 	function load_libraries() {
 
-		// Require the PHP Simple HTML DOM Parser library
+		/** Require the PHP Simple HTML DOM Parser library */
 		require( JFP_PLUGIN_DIR . 'lib' . DIRECTORY_SEPARATOR . 'simple_html_dom.php' );
 
 	}
@@ -104,6 +109,7 @@ class Japh_Favorite_Plugins {
 	 */
 	function activate() {
 
+		add_option( 'jfp_favorite_user' );
 		add_option( 'jfp_favorite_plugins' );
 
 	}
@@ -115,22 +121,8 @@ class Japh_Favorite_Plugins {
 	 */
 	function deactivate() {
 
+		delete_option( 'jfp_favorite_user' );
 		delete_option( 'jfp_favorite_plugins' );
-
-	}
-
-	/**
-	 * Register any scripts and styles for the plugin
-	 *
-	 * Registering scripts and styles is done here, and they can then be
-	 * enqueued in the appropriate place later on.
-	 *
-	 * @since 0.1
-	 */
-	function register_scripts_and_styles() {
-
-		// Register scripts for later enqueuing
-		wp_register_script( 'jfp-favorite-plugins', plugins_url( '/js/favorite-plugins.js', __FILE__ ), array( 'jquery' ), $this->version );
 
 	}
 
@@ -157,19 +149,33 @@ class Japh_Favorite_Plugins {
 	 */
 	function do_favorites_tab( $paged ) {
 
-		wp_enqueue_script( 'jfp-favorite-plugins' );
+		if ( ! empty( $_GET['username'] ) && $_GET['username'] != $this->username ) {
 
-		$favorite_plugins = get_option( 'jfp_favorite_plugins' );
+			if ( wp_verify_nonce( $_GET['nonce'], 'favorite-plugins-nonce' ) ) {
+
+				update_option( 'jfp_favorite_user', $_GET['username'] );
+				$this->username = $_GET['username'];
+				$this->favorite_plugins = $this->get_favorites();
+				update_option( 'jfp_favorite_plugins', $this->favorite_plugins );
+
+			}
+
+		} elseif ( empty( $this->favorite_plugins ) && ! empty( $this->username ) ) {
+
+			$this->favorite_plugins = $this->get_favorites();
+			update_option( 'jfp_favorite_plugins', $this->favorite_plugins );
+		}
 
 		$html = '';
 
-		if ( ! empty( $favorite_plugins ) ) {
+		$plugins = unserialize( $this->favorite_plugins );
+		$plugins_count = count( $plugins );
 
-			$html .= $this->display_favorites_table( $favorite_plugins );
+		$html = $this->favorites_table_header( $plugins_count );
 
-		} else {
-			$html .= '<span id="ajax-notification-nonce" class="hidden">' . wp_create_nonce( 'ajax-notification-nonce' ) . '</span>';
-		}
+		$html .= $this->display_favorites_table( $plugins );
+
+		$html .= $this->favorites_table_footer( $plugins_count );
 
 		echo $html;
 
@@ -185,23 +191,12 @@ class Japh_Favorite_Plugins {
 	 */
 	function get_favorites() {
 
-		if ( wp_verify_nonce( $_REQUEST['nonce'], 'ajax-notification-nonce') ) {
-			$favorite_plugins = get_option( 'jfp_favorite_plugins' );
+		$favorite_plugins = $this->fetch_favorites();
 
-			if ( empty( $favorite_plugins ) ) {
-				$this->username = $_REQUEST['username'];
-				$favorite_plugins = $this->fetch_favorites();
-			}
-
-			if ( ! empty( $favorite_plugins ) ) {
-				update_option( 'jfp_favorite_plugins', $favorite_plugins );
-
-				die( $this->display_favorites_table( $favorite_plugins ) );
-			} else {
-				die( '-1' );
-			}
+		if ( ! empty( $favorite_plugins ) ) {
+			return serialize( $favorite_plugins );
 		} else {
-			die( '-1' );
+			return false;
 		}
 
 	}
@@ -237,7 +232,7 @@ class Japh_Favorite_Plugins {
 
 				foreach ( $header as $head ) {
 
-					if ( strtolower( $head->innertext ) == strtolower( $this->username . "'s favorite plugins" ) ) {
+					if ( strpos( strtolower( $head->innertext ), strtolower( "favorite plugins" ) ) !== false ) {
 
 						$favorites_list = $head->next_sibling();
 
@@ -263,20 +258,11 @@ class Japh_Favorite_Plugins {
 				}
 			}
 
-			return serialize( $favorite_plugins );
+			return $favorite_plugins;
 		}
 	}
 
-	/**
-	 * Return a table with the favorite plugins for display
-	 *
-	 * @since 0.1
-	 * @param array $favorite_plugins User's favorite plugins serialized
-	 * @return string HTML table output of plugin list
-	 */
-	function display_favorites_table( $favorite_plugins ) {
-
-		$plugins = unserialize( $favorite_plugins );
+	function favorites_table_header( $plugins_count ) {
 
 		$html = '';
 
@@ -286,14 +272,14 @@ class Japh_Favorite_Plugins {
 		$html .= '	<div class="alignleft actions">' . "\n";
 		$html .= '		<form id="favorite-plugins" method="get" action="">' . "\n";
 		$html .= '			<input type="hidden" name="tab" value="favorites">' . "\n";
-		$html .= '			<input type="search" name="username" value="">' . "\n";
+		$html .= '			<input type="search" name="username" value="' . ( ! empty( $this->username ) ? $this->username : '' ) . '">' . "\n";
 		$html .= '			<label class="screen-reader-text" for="plugin-favorite-input">Favorite Plugins</label>' . "\n";
 		$html .= '			<input type="submit" name="plugin-favorite-input" id="plugin-favorite-input" class="button" value="Favorite Plugins">' . "\n";
+		$html .= '			<input type="hidden" name="nonce" value="' . wp_create_nonce( 'favorite-plugins-nonce' ) . '">';
 		$html .= '		</form>' . "\n";
 		$html .= '	</div>' . "\n";
 
 		$html .= '	<div class="tablenav-pages one-page">' . "\n";
-		$plugins_count = count( $plugins );
 		$html .= '		<span class="displaying-num">' . $plugins_count . ' item' . ( $plugins_count == 1 ? '' : 's' ) . '</span>' . "\n";
 		$html .= '	</div>' . "\n";
 		$html .= '	<br class="clear">' . "\n";
@@ -321,90 +307,13 @@ class Japh_Favorite_Plugins {
 		$html .= '		</tr>' . "\n";
 		$html .= '	</tfoot>' . "\n";
 
-		$html .= '	<tbody id="the-list">' . "\n";
+		return $html;
 
-		// Table rows
-		foreach ( $plugins as $plugin ) {
+	}
 
-			$plugin = $this->get_plugin_info( $plugin );
-			//echo '<pre>' . print_r( $plugin, true ) . '</pre>';
+	function favorites_table_footer( $plugins_count ) {
 
-			$status = $this->plugin_install_status( $plugin );
-			//echo '<pre>' . print_r( $status, true ) . '</pre>';
-
-			$plugins_allowedtags = array(
-				'a' => array( 'href' => array(),'title' => array(), 'target' => array() ),
-				'abbr' => array( 'title' => array() ),'acronym' => array( 'title' => array() ),
-				'code' => array(), 'pre' => array(), 'em' => array(),'strong' => array(),
-				'ul' => array(), 'ol' => array(), 'li' => array(), 'p' => array(), 'br' => array()
-			);
-
-			$title = wp_kses( $plugin->name, $plugins_allowedtags );
-			//Limit description to 400char, and remove any HTML.
-			$description = strip_tags( $plugin->sections['description'] );
-			if ( strlen( $description ) > 400 )
-				$description = mb_substr( $description, 0, 400 ) . '&#8230;';
-			//remove any trailing entities
-			$description = preg_replace( '/&[^;\s]{0,6}$/', '', $description );
-			//strip leading/trailing & multiple consecutive lines
-			$description = trim( $description );
-			$description = preg_replace( "|(\r?\n)+|", "\n", $description );
-			//\n => <br>
-			$description = nl2br( $description );
-			$version = wp_kses( $plugin->version, $plugins_allowedtags );
-
-			$name = strip_tags( $title . ' ' . $version );
-
-			$author = $plugin->author;
-			if ( ! empty( $plugin->author ) )
-				$author = ' <cite>' . sprintf( __( 'By %s' ), $author ) . '.</cite>';
-
-			$author = wp_kses( $author, $plugins_allowedtags );
-
-			$action_links = array();
-			$action_links[] = '<a href="' . self_admin_url( 'plugin-install.php?tab=plugin-information&amp;plugin=' . $plugin->slug .
-								'&amp;TB_iframe=true&amp;width=600&amp;height=550' ) . '" class="thickbox" title="' .
-								esc_attr( sprintf( __( 'More information about %s' ), $name ) ) . '">' . __( 'Details' ) . '</a>';
-
-			if ( current_user_can( 'install_plugins' ) || current_user_can( 'update_plugins' ) ) {
-				$status = install_plugin_install_status( $plugin );
-
-				switch ( $status['status'] ) {
-					case 'install':
-						if ( $status['url'] )
-							$action_links[] = '<a class="install-now" href="' . $status['url'] . '" title="' . esc_attr( sprintf( __( 'Install %s' ), $name ) ) . '">' . __( 'Install Now' ) . '</a>';
-						break;
-					case 'update_available':
-						if ( $status['url'] )
-							$action_links[] = '<a href="' . $status['url'] . '" title="' . esc_attr( sprintf( __( 'Update to version %s' ), $status['version'] ) ) . '">' . sprintf( __( 'Update Now' ), $status['version'] ) . '</a>';
-						break;
-					case 'latest_installed':
-					case 'newer_installed':
-						$action_links[] = '<span title="' . esc_attr__( 'This plugin is already installed and is up to date' ) . ' ">' . _x( 'Installed', 'plugin' ) . '</span>';
-						break;
-				}
-			}
-
-			$action_links = apply_filters( 'plugin_install_action_links', $action_links, $plugin );
-
-			$html .= '		<tr>' . "\n";
-
-			$html .= '			<td class="name column-name"><strong>' . $title . '</strong>';
-			$html .= '				<div class="action-links">' . ( !empty( $action_links ) ? implode( ' | ', $action_links ) : '' ) . '</div>';
-			$html .= '			</td>';
-			$html .= '			<td class="vers column-version">' . $version . '</td>';
-			$html .= '			<td class="vers column-rating">';
-			$html .= '				<div class="star-holder" title="' . sprintf( _n( '(based on %s rating)', '(based on %s ratings)', $plugin->num_ratings ), number_format_i18n( $plugin->num_ratings ) ) . '">';
-			$html .= '				<div class="star star-rating" style="width: ' . esc_attr( str_replace( ',', '.', $plugin->rating ) ) . 'px"></div>';
-			$html .= '				</div>';
-			$html .= '			</td>';
-			$html .= '			<td class="desc column-description">' . $description . $author . '</td>';
-
-			$html .= '		</tr>' . "\n";
-		}
-
-		$html .= '	</tbody>' . "\n";
-		$html .= '</table>' . "\n";
+		$html = '';
 
 		// Table footer
 		$html .= '<div class="tablenav bottom">' . "\n";
@@ -413,6 +322,113 @@ class Japh_Favorite_Plugins {
 		$html .= '	</div>' . "\n";
 		$html .= '	<br class="clear">' . "\n";
 		$html .= '</div>' . "\n";
+
+		return $html;
+
+	}
+
+	/**
+	 * Return a table with the favorite plugins for display
+	 *
+	 * @since 0.1
+	 * @param array $favorite_plugins User's favorite plugins serialized
+	 * @return string HTML table output of plugin list
+	 */
+	function display_favorites_table( $plugins ) {
+
+		$html = '';
+
+		$html .= '	<tbody id="the-list">' . "\n";
+
+		if ( ! empty( $plugins ) ) {
+
+			// Table rows
+			foreach ( $plugins as $plugin ) {
+
+				$plugin = $this->get_plugin_info( $plugin );
+				//echo '<pre>' . print_r( $plugin, true ) . '</pre>';
+
+				$status = $this->plugin_install_status( $plugin );
+				//echo '<pre>' . print_r( $status, true ) . '</pre>';
+
+				$plugins_allowedtags = array(
+					'a' => array( 'href' => array(),'title' => array(), 'target' => array() ),
+					'abbr' => array( 'title' => array() ),'acronym' => array( 'title' => array() ),
+					'code' => array(), 'pre' => array(), 'em' => array(),'strong' => array(),
+					'ul' => array(), 'ol' => array(), 'li' => array(), 'p' => array(), 'br' => array()
+				);
+
+				$title = wp_kses( $plugin->name, $plugins_allowedtags );
+				//Limit description to 400char, and remove any HTML.
+				$description = strip_tags( $plugin->sections['description'] );
+				if ( strlen( $description ) > 400 )
+					$description = mb_substr( $description, 0, 400 ) . '&#8230;';
+				//remove any trailing entities
+				$description = preg_replace( '/&[^;\s]{0,6}$/', '', $description );
+				//strip leading/trailing & multiple consecutive lines
+				$description = trim( $description );
+				$description = preg_replace( "|(\r?\n)+|", "\n", $description );
+				//\n => <br>
+				$description = nl2br( $description );
+				$version = wp_kses( $plugin->version, $plugins_allowedtags );
+
+				$name = strip_tags( $title . ' ' . $version );
+
+				$author = $plugin->author;
+				if ( ! empty( $plugin->author ) )
+					$author = ' <cite>' . sprintf( __( 'By %s' ), $author ) . '.</cite>';
+
+				$author = wp_kses( $author, $plugins_allowedtags );
+
+				$action_links = array();
+				$action_links[] = '<a href="' . self_admin_url( 'plugin-install.php?tab=plugin-information&amp;plugin=' . $plugin->slug .
+									'&amp;TB_iframe=true&amp;width=600&amp;height=550' ) . '" class="thickbox" title="' .
+									esc_attr( sprintf( __( 'More information about %s' ), $name ) ) . '">' . __( 'Details' ) . '</a>';
+
+				if ( current_user_can( 'install_plugins' ) || current_user_can( 'update_plugins' ) ) {
+					$status = install_plugin_install_status( $plugin );
+
+					switch ( $status['status'] ) {
+						case 'install':
+							if ( $status['url'] )
+								$action_links[] = '<a class="install-now" href="' . $status['url'] . '" title="' . esc_attr( sprintf( __( 'Install %s' ), $name ) ) . '">' . __( 'Install Now' ) . '</a>';
+							break;
+						case 'update_available':
+							if ( $status['url'] )
+								$action_links[] = '<a href="' . $status['url'] . '" title="' . esc_attr( sprintf( __( 'Update to version %s' ), $status['version'] ) ) . '">' . sprintf( __( 'Update Now' ), $status['version'] ) . '</a>';
+							break;
+						case 'latest_installed':
+						case 'newer_installed':
+							$action_links[] = '<span title="' . esc_attr__( 'This plugin is already installed and is up to date' ) . ' ">' . _x( 'Installed', 'plugin' ) . '</span>';
+							break;
+					}
+				}
+
+				$action_links = apply_filters( 'plugin_install_action_links', $action_links, $plugin );
+
+				$html .= '		<tr>' . "\n";
+
+				$html .= '			<td class="name column-name"><strong>' . $title . '</strong>';
+				$html .= '				<div class="action-links">' . ( !empty( $action_links ) ? implode( ' | ', $action_links ) : '' ) . '</div>';
+				$html .= '			</td>';
+				$html .= '			<td class="vers column-version">' . $version . '</td>';
+				$html .= '			<td class="vers column-rating">';
+				$html .= '				<div class="star-holder" title="' . sprintf( _n( '(based on %s rating)', '(based on %s ratings)', $plugin->num_ratings ), number_format_i18n( $plugin->num_ratings ) ) . '">';
+				$html .= '				<div class="star star-rating" style="width: ' . esc_attr( str_replace( ',', '.', $plugin->rating ) ) . 'px"></div>';
+				$html .= '				</div>';
+				$html .= '			</td>';
+				$html .= '			<td class="desc column-description">' . $description . $author . '</td>';
+
+				$html .= '		</tr>' . "\n";
+			}
+		} else {
+				$html .= '		<tr class="no-items">' . "\n";
+				$html .= '			<td class="colspanchange" colspan="4">' . __( 'No favorite plugins found.', 'jfp' ) . '</td>' . "\n";
+				$html .= '		</tr>' . "\n";
+		}
+
+		$html .= '	</tbody>' . "\n";
+		$html .= '</table>' . "\n";
 
 		return $html;
 
