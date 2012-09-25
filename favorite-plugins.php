@@ -282,7 +282,7 @@ class Japh_Favorite_Plugins {
 		$html .= '			<input type="hidden" name="tab" value="favorites">' . "\n";
 		$html .= '			<input type="search" name="username" value="' . ( ! empty( $this->username ) ? $this->username : '' ) . '">' . "\n";
 		$html .= '			<label class="screen-reader-text" for="plugin-favorite-input">' . __( 'Favorite Plugins', 'jfp' ) . '</label>' . "\n";
-		$html .= '			<input type="submit" name="plugin-favorite-input" id="plugin-favorite-input" class="button" value="' . __( 'Favorite Plugins' , 'jfp' ) . '">' . "\n";
+		$html .= '			<input type="submit" name="plugin-favorite-input" id="plugin-favorite-input" class="button" value="' . __( 'Get Favorites' , 'jfp' ) . '">' . "\n";
 		$html .= '			<input type="hidden" name="nonce" value="' . wp_create_nonce( 'favorite-plugins-nonce' ) . '">';
 		$html .= '		</form>' . "\n";
 		$html .= '	</div>' . "\n";
