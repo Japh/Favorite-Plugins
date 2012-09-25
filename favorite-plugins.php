@@ -188,6 +188,7 @@ class Japh_Favorite_Plugins {
 	 * we'll hit WordPress.org and grab them.
 	 *
 	 * @since 0.1
+	 * @return string Serialized string of favorite plugins. FALSE if no plugins.
 	 */
 	function get_favorites() {
 
@@ -262,6 +263,13 @@ class Japh_Favorite_Plugins {
 		}
 	}
 
+	/**
+	 * Return the table header for the favorite plugins table display
+	 *
+	 * @since 0.1
+	 * @param int $plugins_count Number of plugins to be displayed
+	 * @return string HTML table header for output
+	 */
 	function favorites_table_header( $plugins_count ) {
 
 		$html = '';
@@ -311,6 +319,13 @@ class Japh_Favorite_Plugins {
 
 	}
 
+	/**
+	 * Return the table footer for the favorite plugins table display
+	 *
+	 * @since 0.1
+	 * @param int $plugins_count Number of plugins to be displayed
+	 * @return string HTML table footer for output
+	 */
 	function favorites_table_footer( $plugins_count ) {
 
 		$html = '';
@@ -435,7 +450,9 @@ class Japh_Favorite_Plugins {
 	/**
 	 * Determine the status we can perform on a plugin.
 	 *
-	 * @since 3.0.0
+	 * @since 0.1
+	 * @param array $favorite An array containing details for a plugin
+	 * @return array An array with elements representing the plugin's status
 	 */
 	function plugin_install_status( $favorite ) {
 		// this function is called recursively, $loop prevents further loops.
@@ -496,6 +513,13 @@ class Japh_Favorite_Plugins {
 		return compact( 'status', 'url', 'version' );
 	}
 
+	/**
+	 * Gather info for a specific plugin from WordPress.org's API
+	 *
+	 * @since 0.1
+	 * @param array $plugin An array representing a specific plugin
+	 * @return object An object representing a plugin and its info
+	 */
 	function get_plugin_info( $plugin ) {
 
 		$plugin = (object) $plugin;
@@ -519,6 +543,7 @@ class Japh_Favorite_Plugins {
 	 * Loads the plugin's translations
 	 *
 	 * @since 0.1
+	 * @return void
 	 */
 	function textdomain() {
 
