@@ -273,14 +273,14 @@ class Japh_Favorite_Plugins {
 		$html .= '		<form id="favorite-plugins" method="get" action="">' . "\n";
 		$html .= '			<input type="hidden" name="tab" value="favorites">' . "\n";
 		$html .= '			<input type="search" name="username" value="' . ( ! empty( $this->username ) ? $this->username : '' ) . '">' . "\n";
-		$html .= '			<label class="screen-reader-text" for="plugin-favorite-input">Favorite Plugins</label>' . "\n";
-		$html .= '			<input type="submit" name="plugin-favorite-input" id="plugin-favorite-input" class="button" value="Favorite Plugins">' . "\n";
+		$html .= '			<label class="screen-reader-text" for="plugin-favorite-input">' . __( 'Favorite Plugins', 'jfp' ) . '</label>' . "\n";
+		$html .= '			<input type="submit" name="plugin-favorite-input" id="plugin-favorite-input" class="button" value="' . __( 'Favorite Plugins' , 'jfp' ) . '">' . "\n";
 		$html .= '			<input type="hidden" name="nonce" value="' . wp_create_nonce( 'favorite-plugins-nonce' ) . '">';
 		$html .= '		</form>' . "\n";
 		$html .= '	</div>' . "\n";
 
 		$html .= '	<div class="tablenav-pages one-page">' . "\n";
-		$html .= '		<span class="displaying-num">' . $plugins_count . ' item' . ( $plugins_count == 1 ? '' : 's' ) . '</span>' . "\n";
+		$html .= '		<span class="displaying-num">' . sprintf( _n( '%d item', '%d items', $plugins_count ), $plugins_count ) . '</span>' . "\n";
 		$html .= '	</div>' . "\n";
 		$html .= '	<br class="clear">' . "\n";
 		$html .= '</div>' . "\n";
@@ -290,20 +290,20 @@ class Japh_Favorite_Plugins {
 		// Table head
 		$html .= '	<thead>' . "\n";
 		$html .= '		<tr>' . "\n";
-		$html .= '			<th scope="col" id="name" class="manage-column column-name" style="">Name</th>' . "\n";
-		$html .= '			<th scope="col" id="version" class="manage-column column-version" style="">Version</th>' . "\n";
-		$html .= '			<th scope="col" id="rating" class="manage-column column-rating" style="">Rating</th>' . "\n";
-		$html .= '			<th scope="col" id="description" class="manage-column column-description" style="">Description</th>' . "\n";
+		$html .= '			<th scope="col" id="name" class="manage-column column-name" style="">' . __( 'Name' ) . '</th>' . "\n";
+		$html .= '			<th scope="col" id="version" class="manage-column column-version" style="">' . __( 'Version' ) . '</th>' . "\n";
+		$html .= '			<th scope="col" id="rating" class="manage-column column-rating" style="">' . __( 'Rating' ) . '</th>' . "\n";
+		$html .= '			<th scope="col" id="description" class="manage-column column-description" style="">' . __( 'Description' ) . '</th>' . "\n";
 		$html .= '		</tr>' . "\n";
 		$html .= '	</thead>' . "\n";
 
 		// Table foot
 		$html .= '	<tfoot>' . "\n";
 		$html .= '		<tr>' . "\n";
-		$html .= '			<th scope="col" id="name" class="manage-column column-name" style="">Name</th>' . "\n";
-		$html .= '			<th scope="col" id="version" class="manage-column column-version" style="">Version</th>' . "\n";
-		$html .= '			<th scope="col" id="rating" class="manage-column column-rating" style="">Rating</th>' . "\n";
-		$html .= '			<th scope="col" id="description" class="manage-column column-description" style="">Description</th>' . "\n";
+		$html .= '			<th scope="col" id="name" class="manage-column column-name" style="">' . __( 'Name' ) . '</th>' . "\n";
+		$html .= '			<th scope="col" id="version" class="manage-column column-version" style="">' . __( 'Version' ) . '</th>' . "\n";
+		$html .= '			<th scope="col" id="rating" class="manage-column column-rating" style="">' . __( 'Rating' ) . '</th>' . "\n";
+		$html .= '			<th scope="col" id="description" class="manage-column column-description" style="">' . __( 'Description' ) . '</th>' . "\n";
 		$html .= '		</tr>' . "\n";
 		$html .= '	</tfoot>' . "\n";
 
@@ -318,7 +318,7 @@ class Japh_Favorite_Plugins {
 		// Table footer
 		$html .= '<div class="tablenav bottom">' . "\n";
 		$html .= '	<div class="tablenav-pages one-page">' . "\n";
-		$html .= '		<span class="displaying-num">' . $plugins_count . ' item' . ( $plugins_count == 1 ? '' : 's' ) . '</span>' . "\n";
+		$html .= '		<span class="displaying-num">' . sprintf( _n( '%d item', '%d items', $plugins_count ), $plugins_count ) . '</span>' . "\n";
 		$html .= '	</div>' . "\n";
 		$html .= '	<br class="clear">' . "\n";
 		$html .= '</div>' . "\n";
@@ -346,10 +346,8 @@ class Japh_Favorite_Plugins {
 			foreach ( $plugins as $plugin ) {
 
 				$plugin = $this->get_plugin_info( $plugin );
-				//echo '<pre>' . print_r( $plugin, true ) . '</pre>';
 
 				$status = $this->plugin_install_status( $plugin );
-				//echo '<pre>' . print_r( $status, true ) . '</pre>';
 
 				$plugins_allowedtags = array(
 					'a' => array( 'href' => array(),'title' => array(), 'target' => array() ),
@@ -466,7 +464,7 @@ class Japh_Favorite_Plugins {
 		if ( 'install' == $status ) {
 			if ( is_dir( WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . $favorite->slug ) ) {
 				$installed_plugin = get_plugins('/' . $favorite->slug);
-//				echo '<pre>' . print_r( $installed_plugin, true ) . '</pre>';
+
 				if ( empty( $installed_plugin ) ) {
 					if ( current_user_can( 'install_plugins' ) )
 						$url = wp_nonce_url( self_admin_url( 'update.php?action=install-plugin&plugin=' . $favorite->slug ), 'install-plugin_' . $favorite->slug );
