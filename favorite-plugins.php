@@ -2,7 +2,7 @@
 /*
 Plugin Name: Favorite Plugins
 Plugin URI: http://japh.wordpress.com/plugins/favorite-plugins
-Description: Quickly and easily access and install your favorite plugins. Because... they're your favorites!
+Description: Quickly and easily access and install your favorited plugins from WordPress.org, right from your dashboard.
 Version: 0.1
 Author: Japh
 Author URI: http://japh.wordpress.com
