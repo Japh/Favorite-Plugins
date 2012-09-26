@@ -61,7 +61,7 @@ if ( ! defined( 'JFP_PLUGIN_FILE' ) ) {
  * @package JaphFavoritePlugins
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.1
+ * @version 0.2
  * @since 0.1
  */
 class Japh_Favorite_Plugins {
@@ -79,6 +79,12 @@ class Japh_Favorite_Plugins {
 	 * @since 0.1
 	 */
 	function __construct() {
+
+		$current_version = get_option( 'jfp_favourite_plugins_version' );
+
+		if ( $current_version != $this->version ) {
+			update_option( 'jfp_favourite_plugins_version', $this->do_update( $current_version ) );
+		}
 
 		add_action( 'init', array( &$this, 'textdomain' ) );
 		add_action( 'admin_init', array( &$this, 'load_libraries' ) );
@@ -566,6 +572,23 @@ class Japh_Favorite_Plugins {
 		// Load translations
 		load_plugin_textdomain( 'jfp', false, $jfp_language_directory );
 
+	}
+
+	/**
+	 * A simple function to handle any cleanup during an update
+	 *
+	 * @since 0.2
+	 * @param string $current_version Provides the current version installed for comparison
+	 * @return void
+	 */
+	function do_update( $current_version ) {
+
+		switch ( $current_version ) {
+			case '0.1':
+				delete_option( 'jfp_favorite_plugins' );
+		}
+
+		return $this->version;
 	}
 
 }
