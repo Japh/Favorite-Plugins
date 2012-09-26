@@ -3,7 +3,7 @@
 Plugin Name: Favorite Plugins
 Plugin URI: http://japh.wordpress.com/plugins/favorite-plugins
 Description: Quickly and easily access and install your favorited plugins from WordPress.org, right from your dashboard.
-Version: 0.3
+Version: 0.4
 Author: Japh
 Author URI: http://japh.wordpress.com
 License: GPL2
@@ -35,7 +35,7 @@ License: GPL2
  * @author Japh <wordpress@japh.com.au>
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.3
+ * @version 0.4
  * @link http://japh.wordpress.com/plugins/favorite-plugins
  * @since 0.1
  */
@@ -61,12 +61,12 @@ if ( ! defined( 'JFP_PLUGIN_FILE' ) ) {
  * @package JaphFavoritePlugins
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.3
+ * @version 0.4
  * @since 0.1
  */
 class Japh_Favorite_Plugins {
 
-	public $version = '0.3';
+	public $version = '0.4';
 	public $username = null;
 	public $favorite_plugins = null;
 
@@ -214,60 +214,7 @@ class Japh_Favorite_Plugins {
 	 * @return string Serialized string of favorite plugins
 	 */
 	function fetch_favorites() {
-
-		$favorites_url = 'http://profiles.wordpress.org/' . $this->username;
-		$favorites_html = wp_remote_get( esc_url( $favorites_url ) );
-
-		if ( is_wp_error( $favorites_html ) ) {
-			return '-1';
-		} else {
-			if ( preg_match( '/(?:<body[^>]*>)(.*)<\/body>/isU', $favorites_html['body'], $matches ) ) {
-				$body = $matches[1];
-			}
-
-			$favorite_plugins = array();
-
-			if ( ! empty( $body ) ) {
-				/** Require the PHP Simple HTML DOM Parser library */
-				require( JFP_PLUGIN_DIR . 'lib' . DIRECTORY_SEPARATOR . 'simple_html_dom.php' );
-
-				$doc = str_get_html( $body );
-
-				foreach ( $doc->find( 'div.main-plugins' ) as $section ) {
-
-					$header = $section->find( 'h4' );
-
-					foreach ( $header as $head ) {
-
-						if ( strpos( strtolower( $head->innertext ), strtolower( "favorite plugins" ) ) !== false ) {
-
-							$favorites_list = $head->next_sibling();
-
-							foreach ( $favorites_list->children() as $favorite ) {
-								if ( ! empty( $favorite->plaintext ) ) {
-
-									$a = $favorite->find( 'a' );
-
-									foreach ( $a as $link ) {
-
-										$new_favorite = array();
-										$new_favorite['name'] = $link->innertext;
-										$new_favorite['url'] = $link->href;
-										$slug = explode( '/', $link->href );
-										$new_favorite['slug'] = $slug[count( $slug ) - 2];
-
-										$favorite_plugins[$new_favorite['slug']] = $new_favorite;
-
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-
-			return $favorite_plugins;
-		}
+		return false;
 	}
 
 	/**

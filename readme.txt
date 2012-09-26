@@ -3,13 +3,15 @@ Contributors: japh
 Tags: favorite, plugins, install
 Requires at least: 3.4
 Tested up to: 3.4.2
-Stable tag: 0.3
+Stable tag: 0.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 Quickly and easily access and install your favorited plugins from WordPress.org, right from your dashboard.
 
 == Description ==
+
+***** Please note, this plugin is currently inoperable until WordPress.org has a Favorites API *****
 
 This is a simple plugin that adds "Favorites" to the plugin installation screen in WordPress. Simply enter your WordPress.org username (or even someone else's) and see a list of favorite plugins that can be easily installed.
 
@@ -40,6 +42,10 @@ Not to worry, the 'Favorites' tab will show you if you already have one of your 
 1. The new 'Favorites' tab
 
 == Changelog ==
+
+= 0.4 =
+* Removed the HTML parsing library and all scraping code from the plugin
+* This update stops the plugin from working
 
 = 0.3 =
 * The HTML parsing library is now loaded in a more conservative location, so it's only loaded when needed
