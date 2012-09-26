@@ -166,16 +166,26 @@ class Japh_Favorite_Plugins {
 			update_option( 'jfp_favorite_plugins', $this->favorite_plugins );
 		}
 
-		$html = '';
+		/* Let's store the html in a transient for an hour */
+		
+		$html = get_transient( 'jfp_favourite_plugins_html' );
 
-		$plugins = unserialize( $this->favorite_plugins );
-		$plugins_count = count( $plugins );
+		if ( false === $html ) {
 
-		$html = $this->favorites_table_header( $plugins_count );
+			$html = '';
 
-		$html .= $this->display_favorites_table( $plugins );
+			$plugins = unserialize( $this->favorite_plugins );
+			$plugins_count = count( $plugins );
 
-		$html .= $this->favorites_table_footer( $plugins_count );
+			$html = $this->favorites_table_header( $plugins_count );
+
+			$html .= $this->display_favorites_table( $plugins );
+
+			$html .= $this->favorites_table_footer( $plugins_count );
+
+			set_transient( 'jfp_favourite_plugins_html', $html, 3600 );
+
+		}
 
 		echo $html;
 
