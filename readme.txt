@@ -3,7 +3,7 @@ Contributors: japh
 Tags: favorite, plugins, install
 Requires at least: 3.4
 Tested up to: 3.4.2
-Stable tag: 0.1
+Stable tag: 0.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,6 +36,9 @@ Cetainly! Simply enter the other user's username into the field instead, click '
 Not to worry, the 'Favorites' tab will show you if you already have one of your favorite plugins installed. In fact, it'll even let you know if the installed version is out of date.
 
 == Changelog ==
+
+= 0.2 =
+* Implemented caching with transients
 
 = 0.1 =
 * This is the very first version!
