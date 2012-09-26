@@ -11,11 +11,11 @@ Quickly and easily access and install your favorited plugins from WordPress.org,
 
 == Description ==
 
-***** Please note, this plugin is currently inoperable until WordPress.org has a Favorites API *****
-
 This is a simple plugin that adds "Favorites" to the plugin installation screen in WordPress. Simply enter your WordPress.org username (or even someone else's) and see a list of favorite plugins that can be easily installed.
 
 Now, favoriting on WordPress.org is even more useful!
+
+*Note: This plugin uses the new Favourites API!*
 
 == Installation ==
 
