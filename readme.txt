@@ -29,11 +29,15 @@ Installation is easy, just follow these steps:
 
 = Can I get another user's favorite plugins this way? =
 
-Cetainly! Simply enter the other user's username into the field instead, click 'Get Favorites', and you'll see their favorite plugins.
+Certainly! Simply enter the other user's username into the field instead, click 'Get Favorites', and you'll see their favorite plugins.
 
 = What if I already have some of my favorite plugins installed? =
 
 Not to worry, the 'Favorites' tab will show you if you already have one of your favorite plugins installed. In fact, it'll even let you know if the installed version is out of date.
+
+== Screenshots ==
+
+1. The new 'Favorites' tab
 
 == Changelog ==
 
