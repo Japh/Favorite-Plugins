@@ -3,7 +3,7 @@
 Plugin Name: Favorite Plugins
 Plugin URI: http://japh.wordpress.com/plugins/favorite-plugins
 Description: Quickly and easily access and install your favorited plugins from WordPress.org, right from your dashboard.
-Version: 0.4
+Version: 0.5
 Author: Japh
 Author URI: http://japh.wordpress.com
 License: GPL2
@@ -35,7 +35,7 @@ License: GPL2
  * @author Japh <wordpress@japh.com.au>
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.4
+ * @version 0.5
  * @link http://japh.wordpress.com/plugins/favorite-plugins
  * @since 0.1
  */
@@ -61,17 +61,13 @@ if ( ! defined( 'JFP_PLUGIN_FILE' ) ) {
  * @package JaphFavoritePlugins
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.4
+ * @version 0.5
  * @since 0.1
  */
 class Japh_Favorite_Plugins {
 
-	public $version = '0.4';
+	public $version = '0.5';
 	public $username = null;
-	public $favorite_plugins = null;
-
-	private $plugin_expiry = 60; // Expiry of transient storing plugin results in minutes
-	private $html_expiry = 15; // Expiry of the transient storing HTML output in minutes
 
 	/**
 	 * Constructor for the plugin's main class
@@ -88,10 +84,12 @@ class Japh_Favorite_Plugins {
 
 		add_action( 'init', array( &$this, 'textdomain' ) );
 		add_filter( 'install_plugins_tabs', array( &$this, 'add_favorites_tab' ) );
-		add_action( 'install_plugins_favorites', array( &$this, 'do_favorites_tab' ) );
+
+		add_action( 'install_plugins_pre_favorites', array( &$this, 'do_favorites_tab' ) );
+		add_action( 'install_plugins_favorites', array( &$this, 'install_plugins_favorites' ), 10, 1 );
+		add_action( 'install_plugins_favorites', 'display_plugins_table');
 
 		$this->username = get_option( 'jfp_favorite_user' );
-		$this->favorite_plugins = get_transient( 'jfp_favourite_plugins' );
 
 	}
 
@@ -120,6 +118,9 @@ class Japh_Favorite_Plugins {
 	/**
 	 * Add a Favorites tab to the install plugins tabs
 	 *
+	 * This method also checks if there is already a Favorites tab,
+	 * which is potentially coming to WordPress core in 3.5
+	 *
 	 * @since 0.1
 	 * @param array $tabs The array of existing install plugins tabs
 	 * @return array The new array of install plugins tabs
@@ -134,297 +135,51 @@ class Japh_Favorite_Plugins {
 	/**
 	 * Output contents of the Favorites tab
 	 *
+	 * Props @Otto42 : http://core.trac.wordpress.org/ticket/22002
+	 * Any code here from Otto is used with permission.
+	 *
 	 * @since 0.1
 	 * @param array $paged The current page for the tab
 	 * @return void
 	 */
-	function do_favorites_tab( $paged ) {
+	function do_favorites_tab() {
+		global $wp_list_table;
 
-		if ( ! empty( $_GET['username'] ) && $_GET['username'] != $this->username ) {
+		$this->username = isset( $_REQUEST['user'] ) ? stripslashes( $_REQUEST['user'] ) : $this->username;
+		update_option( 'jfp_favorite_user', $this->username );
 
-			if ( wp_verify_nonce( $_GET['nonce'], 'favorite-plugins-nonce' ) ) {
+		$args = array( 'user' => $this->username );
+		$api = plugins_api( 'query_plugins', $args );
 
-				update_option( 'jfp_favorite_user', $_GET['username'] );
-				$this->username = $_GET['username'];
-				$this->favorite_plugins = $this->get_favorites();
-				set_transient( 'jfp_favorite_plugins', $this->favorite_plugins, 60 * $this->plugin_expiry );
-
-			}
-
-		} elseif ( empty( $this->favorite_plugins ) && ! empty( $this->username ) ) {
-
-			$this->favorite_plugins = $this->get_favorites();
-			set_transient( 'jfp_favorite_plugins', $this->favorite_plugins, 60 * $this->plugin_expiry );
-
-		}
-
-		/* Let's store the HTML in a transient for an hour */
-
-		$html = get_transient( 'jfp_favourite_plugins_html_' . $this->username );
-
-		if ( false === $html ) {
-
-			$html = '';
-
-			$plugins = unserialize( $this->favorite_plugins );
-			$plugins_count = count( $plugins );
-
-			$html = $this->favorites_table_header( $plugins_count );
-
-			$html .= $this->display_favorites_table( $plugins );
-
-			$html .= $this->favorites_table_footer( $plugins_count );
-
-			set_transient( 'jfp_favourite_plugins_html_' . $this->username, $html, 60 * $this->html_expiry );
-
-		}
-
-		echo $html;
-
+		$wp_list_table->items = $api->plugins;
+		$wp_list_table->set_pagination_args(
+			array(
+				'total_items' => $api->info['results'],
+				'per_page' => 10,
+			)
+		);
 	}
 
 	/**
-	 * Get favorites
+	 * Output username form at the top of the favorite plugins table
 	 *
-	 * We'll try and get the favourites from the database, if they're not there,
-	 * we'll hit WordPress.org and grab them.
+	 * Props @Otto42 : http://core.trac.wordpress.org/ticket/22002
+	 * Any code here from Otto is used with permission.
 	 *
-	 * @since 0.1
-	 * @return string Serialized string of favorite plugins. FALSE if no plugins.
+	 * @since 0.5
+	 * @param int $page Current pagination number
+	 * @return void
 	 */
-	function get_favorites() {
-
-		$favorite_plugins = $this->fetch_favorites();
-
-		if ( ! empty( $favorite_plugins ) ) {
-			return serialize( $favorite_plugins );
-		} else {
-			return false;
-		}
-
-	}
-
-	/**
-	 * Fetch favorites from WordPress.org
-	 *
-	 * Grab favorites from the user's profile page on WordPress.org. Parse the
-	 * HTML of the page to find the favorites and put them into an array.
-	 *
-	 * @since 0.1
-	 * @return string Serialized string of favorite plugins
-	 */
-	function fetch_favorites() {
-		return false;
-	}
-
-	/**
-	 * Return the table header for the favorite plugins table display
-	 *
-	 * @since 0.1
-	 * @param int $plugins_count Number of plugins to be displayed
-	 * @return string HTML table header for output
-	 */
-	function favorites_table_header( $plugins_count ) {
-
-		$html = '';
-
-		// Header
-		$html .= '<div class="tablenav top">' . "\n";
-
-		$html .= '	<div class="alignleft actions">' . "\n";
-		$html .= '		<form id="favorite-plugins" method="get" action="">' . "\n";
-		$html .= '			<input type="hidden" name="tab" value="favorites">' . "\n";
-		$html .= '			<input type="search" name="username" value="' . ( ! empty( $this->username ) ? $this->username : '' ) . '">' . "\n";
-		$html .= '			<label class="screen-reader-text" for="plugin-favorite-input">' . __( 'Favorite Plugins', 'jfp' ) . '</label>' . "\n";
-		$html .= '			<input type="submit" name="plugin-favorite-input" id="plugin-favorite-input" class="button" value="' . __( 'Get Favorites' , 'jfp' ) . '">' . "\n";
-		$html .= '			<input type="hidden" name="nonce" value="' . wp_create_nonce( 'favorite-plugins-nonce' ) . '">';
-		$html .= '		</form>' . "\n";
-		$html .= '	</div>' . "\n";
-
-		$html .= '	<div class="tablenav-pages one-page">' . "\n";
-		$html .= '		<span class="displaying-num">' . sprintf( _n( '%d item', '%d items', $plugins_count ), $plugins_count ) . '</span>' . "\n";
-		$html .= '	</div>' . "\n";
-		$html .= '	<br class="clear">' . "\n";
-		$html .= '</div>' . "\n";
-
-		$html .= '<table class="wp-list-table widefat plugin-install" cellspacing="0">' . "\n";
-
-		// Table head
-		$html .= '	<thead>' . "\n";
-		$html .= '		<tr>' . "\n";
-		$html .= '			<th scope="col" id="name" class="manage-column column-name" style="">' . __( 'Name' ) . '</th>' . "\n";
-		$html .= '			<th scope="col" id="version" class="manage-column column-version" style="">' . __( 'Version' ) . '</th>' . "\n";
-		$html .= '			<th scope="col" id="rating" class="manage-column column-rating" style="">' . __( 'Rating' ) . '</th>' . "\n";
-		$html .= '			<th scope="col" id="description" class="manage-column column-description" style="">' . __( 'Description' ) . '</th>' . "\n";
-		$html .= '		</tr>' . "\n";
-		$html .= '	</thead>' . "\n";
-
-		// Table foot
-		$html .= '	<tfoot>' . "\n";
-		$html .= '		<tr>' . "\n";
-		$html .= '			<th scope="col" id="name" class="manage-column column-name" style="">' . __( 'Name' ) . '</th>' . "\n";
-		$html .= '			<th scope="col" id="version" class="manage-column column-version" style="">' . __( 'Version' ) . '</th>' . "\n";
-		$html .= '			<th scope="col" id="rating" class="manage-column column-rating" style="">' . __( 'Rating' ) . '</th>' . "\n";
-		$html .= '			<th scope="col" id="description" class="manage-column column-description" style="">' . __( 'Description' ) . '</th>' . "\n";
-		$html .= '		</tr>' . "\n";
-		$html .= '	</tfoot>' . "\n";
-
-		return $html;
-
-	}
-
-	/**
-	 * Return the table footer for the favorite plugins table display
-	 *
-	 * @since 0.1
-	 * @param int $plugins_count Number of plugins to be displayed
-	 * @return string HTML table footer for output
-	 */
-	function favorites_table_footer( $plugins_count ) {
-
-		$html = '';
-
-		// Table footer
-		$html .= '<div class="tablenav bottom">' . "\n";
-		$html .= '	<div class="tablenav-pages one-page">' . "\n";
-		$html .= '		<span class="displaying-num">' . sprintf( _n( '%d item', '%d items', $plugins_count ), $plugins_count ) . '</span>' . "\n";
-		$html .= '	</div>' . "\n";
-		$html .= '	<br class="clear">' . "\n";
-		$html .= '</div>' . "\n";
-
-		return $html;
-
-	}
-
-	/**
-	 * Return a table with the favorite plugins for display
-	 *
-	 * @since 0.1
-	 * @param array $favorite_plugins User's favorite plugins serialized
-	 * @return string HTML table output of plugin list
-	 */
-	function display_favorites_table( $plugins ) {
-
-		$html = '';
-
-		$html .= '	<tbody id="the-list">' . "\n";
-
-		if ( ! empty( $plugins ) ) {
-
-			// Table rows
-			foreach ( $plugins as $plugin ) {
-
-				$plugin = $this->get_plugin_info( $plugin );
-
-				$status = install_plugin_install_status( $plugin );
-
-				$plugins_allowedtags = array(
-					'a' => array( 'href' => array(),'title' => array(), 'target' => array() ),
-					'abbr' => array( 'title' => array() ),'acronym' => array( 'title' => array() ),
-					'code' => array(), 'pre' => array(), 'em' => array(),'strong' => array(),
-					'ul' => array(), 'ol' => array(), 'li' => array(), 'p' => array(), 'br' => array()
-				);
-
-				$title = wp_kses( $plugin->name, $plugins_allowedtags );
-				//Limit description to 400char, and remove any HTML.
-				$description = strip_tags( $plugin->sections['description'] );
-				if ( strlen( $description ) > 400 )
-					$description = mb_substr( $description, 0, 400 ) . '&#8230;';
-				//remove any trailing entities
-				$description = preg_replace( '/&[^;\s]{0,6}$/', '', $description );
-				//strip leading/trailing & multiple consecutive lines
-				$description = trim( $description );
-				$description = preg_replace( "|(\r?\n)+|", "\n", $description );
-				//\n => <br>
-				$description = nl2br( $description );
-				$version = wp_kses( $plugin->version, $plugins_allowedtags );
-
-				$name = strip_tags( $title . ' ' . $version );
-
-				$author = $plugin->author;
-				if ( ! empty( $plugin->author ) )
-					$author = ' <cite>' . sprintf( __( 'By %s' ), $author ) . '.</cite>';
-
-				$author = wp_kses( $author, $plugins_allowedtags );
-
-				$action_links = array();
-				$action_links[] = '<a href="' . self_admin_url( 'plugin-install.php?tab=plugin-information&amp;plugin=' . $plugin->slug .
-									'&amp;TB_iframe=true&amp;width=600&amp;height=550' ) . '" class="thickbox" title="' .
-									esc_attr( sprintf( __( 'More information about %s' ), $name ) ) . '">' . __( 'Details' ) . '</a>';
-
-				if ( current_user_can( 'install_plugins' ) || current_user_can( 'update_plugins' ) ) {
-					$status = install_plugin_install_status( $plugin );
-
-					switch ( $status['status'] ) {
-						case 'install':
-							if ( $status['url'] )
-								$action_links[] = '<a class="install-now" href="' . $status['url'] . '" title="' . esc_attr( sprintf( __( 'Install %s' ), $name ) ) . '">' . __( 'Install Now' ) . '</a>';
-							break;
-						case 'update_available':
-							if ( $status['url'] )
-								$action_links[] = '<a href="' . $status['url'] . '" title="' . esc_attr( sprintf( __( 'Update to version %s' ), $status['version'] ) ) . '">' . sprintf( __( 'Update Now' ), $status['version'] ) . '</a>';
-							break;
-						case 'latest_installed':
-						case 'newer_installed':
-							$action_links[] = '<span title="' . esc_attr__( 'This plugin is already installed and is up to date' ) . ' ">' . _x( 'Installed', 'plugin' ) . '</span>';
-							break;
-					}
-				}
-
-				$action_links = apply_filters( 'plugin_install_action_links', $action_links, $plugin );
-
-				$html .= '		<tr>' . "\n";
-
-				$html .= '			<td class="name column-name"><strong>' . $title . '</strong>';
-				$html .= '				<div class="action-links">' . ( !empty( $action_links ) ? implode( ' | ', $action_links ) : '' ) . '</div>';
-				$html .= '			</td>';
-				$html .= '			<td class="vers column-version">' . $version . '</td>';
-				$html .= '			<td class="vers column-rating">';
-				$html .= '				<div class="star-holder" title="' . sprintf( _n( '(based on %s rating)', '(based on %s ratings)', $plugin->num_ratings ), number_format_i18n( $plugin->num_ratings ) ) . '">';
-				$html .= '				<div class="star star-rating" style="width: ' . esc_attr( str_replace( ',', '.', $plugin->rating ) ) . 'px"></div>';
-				$html .= '				</div>';
-				$html .= '			</td>';
-				$html .= '			<td class="desc column-description">' . $description . $author . '</td>';
-
-				$html .= '		</tr>' . "\n";
-			}
-		} else {
-				$html .= '		<tr class="no-items">' . "\n";
-				$html .= '			<td class="colspanchange" colspan="4">' . __( 'No favorite plugins found.', 'jfp' ) . '</td>' . "\n";
-				$html .= '		</tr>' . "\n";
-		}
-
-		$html .= '	</tbody>' . "\n";
-		$html .= '</table>' . "\n";
-
-		return $html;
-
-	}
-
-	/**
-	 * Gather info for a specific plugin from WordPress.org's API
-	 *
-	 * @since 0.1
-	 * @param array $plugin An array representing a specific plugin
-	 * @return object An object representing a plugin and its info
-	 */
-	function get_plugin_info( $plugin ) {
-
-		$plugin = (object) $plugin;
-
-		$res = null;
-
-		$request = wp_remote_post( 'http://api.wordpress.org/plugins/info/1.0/', array( 'timeout' => 15, 'body' => array( 'action' => 'plugin_information', 'request' => serialize( $plugin ) ) ) );
-		if ( is_wp_error( $request ) ) {
-			$res = new WP_Error('plugins_api_failed', __( 'An unexpected error occurred. Something may be wrong with WordPress.org or this server&#8217;s configuration. If you continue to have problems, please try the <a href="http://wordpress.org/support/">support forums</a>.' ), $request->get_error_message() );
-		} else {
-			$res = maybe_unserialize( wp_remote_retrieve_body( $request ) );
-			if ( ! is_object( $res ) && ! is_array( $res ) )
-				$res = new WP_Error('plugins_api_failed', __( 'An unexpected error occurred. Something may be wrong with WordPress.org or this server&#8217;s configuration. If you continue to have problems, please try the <a href="http://wordpress.org/support/">support forums</a>.' ), wp_remote_retrieve_body( $request ) );
-		}
-
-		return $res;
-
+	function install_plugins_favorites( $page = 1 ) {
+		$this->username = isset( $_REQUEST['user'] ) ? stripslashes( $_REQUEST['user'] ) : $this->username;
+		?>
+			<h4><?php _e( 'Find Favorite Plugins for a WordPress.org username:' ); ?></h4>
+			<form method="post" enctype="multipart/form-data" action="<?php echo self_admin_url( 'plugin-install.php?tab=favorites' ); ?>">
+				<label class="screen-reader-text" for="user"><?php _e( 'WordPress.org username' ); ?></label>
+				<input type="search" id="user" name="user" value="<?php echo esc_attr( $this->username ); ?>" />
+				<input type="submit" class="button" value="<?php esc_attr_e( 'Find Favorites' ); ?>" />
+			</form>
+		<?php
 	}
 
 	/**

@@ -3,7 +3,7 @@ Contributors: japh
 Tags: favorite, plugins, install
 Requires at least: 3.4
 Tested up to: 3.4.2
-Stable tag: 0.4
+Stable tag: 0.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -42,6 +42,9 @@ Not to worry, the 'Favorites' tab will show you if you already have one of your 
 1. The new 'Favorites' tab
 
 == Changelog ==
+
+= 0.5 =
+* Switched to utilise the new Favourites API. Props @Otto42.
 
 = 0.4 =
 * Removed the HTML parsing library and all scraping code from the plugin
