@@ -1,4 +1,4 @@
-=== Plugin Name ===
+=== Favorite Plugins ===
 Contributors: japh
 Tags: favorite, plugins, install
 Requires at least: 3.4
@@ -22,7 +22,7 @@ Installation is easy, just follow these steps:
 1. Upload the `favorite-plugins` folder to the `/wp-content/plugins/` directory
 1. Activate the plugin through the 'Plugins' menu in WordPress
 1. Now under the 'Plugins' -> 'New' menu, you'll have a 'Favorites' tab
-1. On teh 'Favorites' tab, simple enter your WordPress.org username, and click 'Get Favorites'
+1. On the 'Favorites' tab, simple enter your WordPress.org username, and click 'Get Favorites'
 1. Ta-da! Now you can install your favorite plugins!
 
 == Frequently Asked Questions ==
