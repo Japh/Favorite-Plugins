@@ -43,6 +43,10 @@ Not to worry, the 'Favorites' tab will show you if you already have one of your 
 
 == Changelog ==
 
+= 0.6 =
+* Moved screenshot to assets directory to make plugin download smaller
+* Removed vestigle /lib directory
+
 = 0.5 =
 * Switched to utilise the new Favourites API. Props @Otto42.
 
