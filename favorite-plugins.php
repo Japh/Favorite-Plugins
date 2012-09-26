@@ -3,7 +3,7 @@
 Plugin Name: Favorite Plugins
 Plugin URI: http://japh.wordpress.com/plugins/favorite-plugins
 Description: Quickly and easily access and install your favorited plugins from WordPress.org, right from your dashboard.
-Version: 0.2
+Version: 0.3
 Author: Japh
 Author URI: http://japh.wordpress.com
 License: GPL2
@@ -35,7 +35,7 @@ License: GPL2
  * @author Japh <wordpress@japh.com.au>
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.2
+ * @version 0.3
  * @link http://japh.wordpress.com/plugins/favorite-plugins
  * @since 0.1
  */
@@ -61,12 +61,12 @@ if ( ! defined( 'JFP_PLUGIN_FILE' ) ) {
  * @package JaphFavoritePlugins
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.2
+ * @version 0.3
  * @since 0.1
  */
 class Japh_Favorite_Plugins {
 
-	public $version = '0.2';
+	public $version = '0.3';
 	public $username = null;
 	public $favorite_plugins = null;
 
@@ -87,27 +87,11 @@ class Japh_Favorite_Plugins {
 		}
 
 		add_action( 'init', array( &$this, 'textdomain' ) );
-		add_action( 'admin_init', array( &$this, 'load_libraries' ) );
 		add_filter( 'install_plugins_tabs', array( &$this, 'add_favorites_tab' ) );
 		add_action( 'install_plugins_favorites', array( &$this, 'do_favorites_tab' ) );
 
 		$this->username = get_option( 'jfp_favorite_user' );
 		$this->favorite_plugins = get_transient( 'jfp_favourite_plugins' );
-
-	}
-
-	/**
-	 * Loads any 3rd-party libraries the plugin utilises
-	 *
-	 * This function will load in any libraries used by the plugin, currently:
-	 *  + PHP Simple HTML DOM Parser
-	 *
-	 * @since 0.1
-	 */
-	function load_libraries() {
-
-		/** Require the PHP Simple HTML DOM Parser library */
-		require( JFP_PLUGIN_DIR . 'lib' . DIRECTORY_SEPARATOR . 'simple_html_dom.php' );
 
 	}
 
@@ -243,33 +227,38 @@ class Japh_Favorite_Plugins {
 
 			$favorite_plugins = array();
 
-			$doc = str_get_html( $body );
+			if ( ! empty( $body ) ) {
+				/** Require the PHP Simple HTML DOM Parser library */
+				require( JFP_PLUGIN_DIR . 'lib' . DIRECTORY_SEPARATOR . 'simple_html_dom.php' );
 
-			foreach ( $doc->find( 'div.main-plugins' ) as $section ) {
+				$doc = str_get_html( $body );
 
-				$header = $section->find( 'h4' );
+				foreach ( $doc->find( 'div.main-plugins' ) as $section ) {
 
-				foreach ( $header as $head ) {
+					$header = $section->find( 'h4' );
 
-					if ( strpos( strtolower( $head->innertext ), strtolower( "favorite plugins" ) ) !== false ) {
+					foreach ( $header as $head ) {
 
-						$favorites_list = $head->next_sibling();
+						if ( strpos( strtolower( $head->innertext ), strtolower( "favorite plugins" ) ) !== false ) {
 
-						foreach ( $favorites_list->children() as $favorite ) {
-							if ( ! empty( $favorite->plaintext ) ) {
+							$favorites_list = $head->next_sibling();
 
-								$a = $favorite->find( 'a' );
+							foreach ( $favorites_list->children() as $favorite ) {
+								if ( ! empty( $favorite->plaintext ) ) {
 
-								foreach ( $a as $link ) {
+									$a = $favorite->find( 'a' );
 
-									$new_favorite = array();
-									$new_favorite['name'] = $link->innertext;
-									$new_favorite['url'] = $link->href;
-									$slug = explode( '/', $link->href );
-									$new_favorite['slug'] = $slug[count( $slug ) - 2];
+									foreach ( $a as $link ) {
 
-									$favorite_plugins[$new_favorite['slug']] = $new_favorite;
+										$new_favorite = array();
+										$new_favorite['name'] = $link->innertext;
+										$new_favorite['url'] = $link->href;
+										$slug = explode( '/', $link->href );
+										$new_favorite['slug'] = $slug[count( $slug ) - 2];
 
+										$favorite_plugins[$new_favorite['slug']] = $new_favorite;
+
+									}
 								}
 							}
 						}

@@ -3,7 +3,7 @@ Contributors: japh
 Tags: favorite, plugins, install
 Requires at least: 3.4
 Tested up to: 3.4.2
-Stable tag: 0.2
+Stable tag: 0.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -40,6 +40,9 @@ Not to worry, the 'Favorites' tab will show you if you already have one of your 
 1. The new 'Favorites' tab
 
 == Changelog ==
+
+= 0.3 =
+* The HTML parsing library is now loaded in a more conservative location, so it's only loaded when needed
 
 = 0.2 =
 * Implemented caching with transients
