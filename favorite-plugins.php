@@ -3,7 +3,7 @@
 Plugin Name: Favorite Plugins
 Plugin URI: http://japh.wordpress.com/plugins/favorite-plugins
 Description: Quickly and easily access and install your favorited plugins from WordPress.org, right from your dashboard.
-Version: 0.1
+Version: 0.2
 Author: Japh
 Author URI: http://japh.wordpress.com
 License: GPL2
@@ -35,7 +35,7 @@ License: GPL2
  * @author Japh <wordpress@japh.com.au>
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.1
+ * @version 0.2
  * @link http://japh.wordpress.com/plugins/favorite-plugins
  * @since 0.1
  */
@@ -66,9 +66,12 @@ if ( ! defined( 'JFP_PLUGIN_FILE' ) ) {
  */
 class Japh_Favorite_Plugins {
 
-	public $version = '0.1';
+	public $version = '0.2';
 	public $username = null;
 	public $favorite_plugins = null;
+
+	private $plugin_expiry = 60; // Expiry of transient storing plugin results in minutes
+	private $html_expiry = 15; // Expiry of the transient storing HTML output in minutes
 
 	/**
 	 * Constructor for the plugin's main class
@@ -83,7 +86,7 @@ class Japh_Favorite_Plugins {
 		add_action( 'install_plugins_favorites', array( &$this, 'do_favorites_tab' ) );
 
 		$this->username = get_option( 'jfp_favorite_user' );
-		$this->favorite_plugins = get_option( 'jfp_favorite_plugins' );
+		$this->favorite_plugins = get_transient( 'jfp_favourite_plugins' );
 
 	}
 
@@ -110,7 +113,6 @@ class Japh_Favorite_Plugins {
 	function activate() {
 
 		add_option( 'jfp_favorite_user' );
-		add_option( 'jfp_favorite_plugins' );
 
 	}
 
@@ -122,7 +124,6 @@ class Japh_Favorite_Plugins {
 	function deactivate() {
 
 		delete_option( 'jfp_favorite_user' );
-		delete_option( 'jfp_favorite_plugins' );
 
 	}
 
@@ -156,19 +157,20 @@ class Japh_Favorite_Plugins {
 				update_option( 'jfp_favorite_user', $_GET['username'] );
 				$this->username = $_GET['username'];
 				$this->favorite_plugins = $this->get_favorites();
-				update_option( 'jfp_favorite_plugins', $this->favorite_plugins );
+				set_transient( 'jfp_favorite_plugins', $this->favorite_plugins, 60 * $this->plugin_expiry );
 
 			}
 
 		} elseif ( empty( $this->favorite_plugins ) && ! empty( $this->username ) ) {
 
 			$this->favorite_plugins = $this->get_favorites();
-			update_option( 'jfp_favorite_plugins', $this->favorite_plugins );
+			set_transient( 'jfp_favorite_plugins', $this->favorite_plugins, 60 * $this->plugin_expiry );
+
 		}
 
-		/* Let's store the html in a transient for an hour */
-		
-		$html = get_transient( 'jfp_favourite_plugins_html' );
+		/* Let's store the HTML in a transient for an hour */
+
+		$html = get_transient( 'jfp_favourite_plugins_html_' . $this->username );
 
 		if ( false === $html ) {
 
@@ -183,7 +185,7 @@ class Japh_Favorite_Plugins {
 
 			$html .= $this->favorites_table_footer( $plugins_count );
 
-			set_transient( 'jfp_favourite_plugins_html', $html, 3600 );
+			set_transient( 'jfp_favourite_plugins_html_' . $this->username, $html, 60 * $this->html_expiry );
 
 		}
 
