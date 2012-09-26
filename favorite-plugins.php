@@ -380,7 +380,7 @@ class Japh_Favorite_Plugins {
 
 				$plugin = $this->get_plugin_info( $plugin );
 
-				$status = $this->plugin_install_status( $plugin );
+				$status = install_plugin_install_status( $plugin );
 
 				$plugins_allowedtags = array(
 					'a' => array( 'href' => array(),'title' => array(), 'target' => array() ),
@@ -463,72 +463,6 @@ class Japh_Favorite_Plugins {
 
 		return $html;
 
-	}
-
-	/**
-	 * Determine the status we can perform on a plugin.
-	 *
-	 * @since 0.1
-	 * @param array $favorite An array containing details for a plugin
-	 * @return array An array with elements representing the plugin's status
-	 */
-	function plugin_install_status( $favorite ) {
-		// this function is called recursively, $loop prevents further loops.
-		if ( is_array( $favorite ) )
-			$favorite = (object) $favorite;
-
-		//Default to a "new" plugin
-		$status = 'install';
-		$url = false;
-
-		//Check to see if this plugin is known to be installed, and has an update awaiting it.
-		$update_plugins = get_site_transient('update_plugins');
-		if ( isset( $update_plugins->response ) ) {
-			foreach ( (array)$update_plugins->response as $file => $plugin ) {
-				if ( $plugin->slug === $favorite->slug ) {
-					$status = 'update_available';
-					$update_file = $file;
-					$version = $plugin->new_version;
-					if ( current_user_can('update_plugins') )
-						$url = wp_nonce_url(self_admin_url('update.php?action=upgrade-plugin&plugin=' . $update_file), 'upgrade-plugin_' . $update_file);
-					break;
-				}
-			}
-		}
-
-		if ( 'install' == $status ) {
-			if ( is_dir( WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . $favorite->slug ) ) {
-				$installed_plugin = get_plugins('/' . $favorite->slug);
-
-				if ( empty( $installed_plugin ) ) {
-					if ( current_user_can( 'install_plugins' ) )
-						$url = wp_nonce_url( self_admin_url( 'update.php?action=install-plugin&plugin=' . $favorite->slug ), 'install-plugin_' . $favorite->slug );
-				} else {
-					$key = array_shift( $key = array_keys( $installed_plugin ) ); // Use the first plugin regardless of the name, Could have issues for multiple-plugins in one directory if they share different version numbers
-					if ( version_compare( $favorite->version, $installed_plugin[ $key ]['Version'], '=' ) ){
-						$status = 'latest_installed';
-					} elseif ( version_compare( $favorite->version, $installed_plugin[ $key ]['Version'], '<' ) ) {
-						$status = 'newer_installed';
-						$version = $installed_plugin[ $key ]['Version'];
-					} else {
-						//If the above update check failed, Then that probably means that the update checker has out-of-date information, force a refresh
-						if ( ! $loop ) {
-							delete_site_transient( 'update_plugins' );
-							wp_update_plugins();
-							return install_plugin_install_status( $favorite, true );
-						}
-					}
-				}
-			} else {
-				// "install" & no directory with that slug
-				if ( current_user_can( 'install_plugins' ) )
-					$url = wp_nonce_url( self_admin_url( 'update.php?action=install-plugin&plugin=' . $favorite->slug ), 'install-plugin_' . $favorite->slug );
-			}
-		}
-		if ( isset( $_GET['from'] ) )
-			$url .= '&amp;from=' . urlencode( stripslashes( $_GET['from'] ) );
-
-		return compact( 'status', 'url', 'version' );
 	}
 
 	/**
