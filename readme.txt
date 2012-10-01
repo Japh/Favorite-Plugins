@@ -3,7 +3,7 @@ Contributors: japh
 Tags: favorite, plugins, install
 Requires at least: 3.4
 Tested up to: 3.4.2
-Stable tag: 0.5
+Stable tag: 0.6
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,7 +45,10 @@ Not to worry, the 'Favorites' tab will show you if you already have one of your 
 
 = 0.6 =
 * Moved screenshot to assets directory to make plugin download smaller
-* Removed vestigle /lib directory
+* Removed vestigial /lib directory
+* Implementing feature parity with upcoming Favorites tab in WordPress 3.5
+* Now uses same meta data as WordPress 3.5 will, to save you time
+* Added redundancy check for WordPress 3.5, plugin will stop execution to avoid conflicts
 
 = 0.5 =
 * Switched to utilise the new Favourites API. Props @Otto42.

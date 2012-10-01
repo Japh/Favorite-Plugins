@@ -3,7 +3,7 @@
 Plugin Name: Favorite Plugins
 Plugin URI: http://japh.wordpress.com/plugins/favorite-plugins
 Description: Quickly and easily access and install your favorited plugins from WordPress.org, right from your dashboard.
-Version: 0.5
+Version: 0.6
 Author: Japh
 Author URI: http://japh.wordpress.com
 License: GPL2
@@ -35,7 +35,7 @@ License: GPL2
  * @author Japh <wordpress@japh.com.au>
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.5
+ * @version 0.6
  * @link http://japh.wordpress.com/plugins/favorite-plugins
  * @since 0.1
  */
@@ -61,12 +61,12 @@ if ( ! defined( 'JFP_PLUGIN_FILE' ) ) {
  * @package JaphFavoritePlugins
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.5
+ * @version 0.6
  * @since 0.1
  */
 class Japh_Favorite_Plugins {
 
-	public $version = '0.5';
+	public $version = '0.6';
 	public $username = null;
 
 	/**
@@ -76,21 +76,23 @@ class Japh_Favorite_Plugins {
 	 */
 	function __construct() {
 
-		$current_version = get_option( 'jfp_favourite_plugins_version' );
+		if ( (float) get_bloginfo( 'version' ) < 3.5 ) {
 
-		if ( $current_version != $this->version ) {
-			update_option( 'jfp_favourite_plugins_version', $this->do_update( $current_version ) );
+			$current_version = get_option( 'jfp_favourite_plugins_version' );
+
+			if ( $current_version != $this->version ) {
+				update_option( 'jfp_favourite_plugins_version', $this->do_update( $current_version ) );
+			}
+
+			add_action( 'init', array( &$this, 'textdomain' ) );
+			add_filter( 'install_plugins_tabs', array( &$this, 'add_favorites_tab' ) );
+
+			add_action( 'install_plugins_pre_favorites', array( &$this, 'do_favorites_tab' ) );
+			add_action( 'install_plugins_favorites', array( &$this, 'install_plugins_favorites' ), 10, 1 );
+			add_action( 'install_plugins_favorites', 'display_plugins_table');
+
+			$this->username = get_user_option( 'wporg_favorites' );
 		}
-
-		add_action( 'init', array( &$this, 'textdomain' ) );
-		add_filter( 'install_plugins_tabs', array( &$this, 'add_favorites_tab' ) );
-
-		add_action( 'install_plugins_pre_favorites', array( &$this, 'do_favorites_tab' ) );
-		add_action( 'install_plugins_favorites', array( &$this, 'install_plugins_favorites' ), 10, 1 );
-		add_action( 'install_plugins_favorites', 'display_plugins_table');
-
-		$this->username = get_option( 'jfp_favorite_user' );
-
 	}
 
 	/**
@@ -100,7 +102,7 @@ class Japh_Favorite_Plugins {
 	 */
 	function activate() {
 
-		add_option( 'jfp_favorite_user' );
+		// Nothing to do...
 
 	}
 
@@ -111,7 +113,7 @@ class Japh_Favorite_Plugins {
 	 */
 	function deactivate() {
 
-		delete_option( 'jfp_favorite_user' );
+		// Nothing to do...
 
 	}
 
@@ -146,18 +148,23 @@ class Japh_Favorite_Plugins {
 		global $wp_list_table;
 
 		$this->username = isset( $_REQUEST['user'] ) ? stripslashes( $_REQUEST['user'] ) : $this->username;
-		update_option( 'jfp_favorite_user', $this->username );
 
-		$args = array( 'user' => $this->username );
-		$api = plugins_api( 'query_plugins', $args );
+		if ( $this->username ) {
+			$args = array( 'user' => $this->username );
+			update_user_meta( get_current_user_id(), 'wporg_favorites', $this->username );
 
-		$wp_list_table->items = $api->plugins;
-		$wp_list_table->set_pagination_args(
-			array(
-				'total_items' => $api->info['results'],
-				'per_page' => 10,
-			)
-		);
+			$api = plugins_api( 'query_plugins', $args );
+
+			$wp_list_table->items = $api->plugins;
+			$wp_list_table->set_pagination_args(
+				array(
+					'total_items' => $api->info['results'],
+					'per_page' => 24,
+				)
+			);
+		} else {
+			$args = false;
+		}
 	}
 
 	/**
@@ -166,6 +173,8 @@ class Japh_Favorite_Plugins {
 	 * Props @Otto42 : http://core.trac.wordpress.org/ticket/22002
 	 * Any code here from Otto is used with permission.
 	 *
+	 * Updated for feature parity with WordPress 3.5
+	 *
 	 * @since 0.5
 	 * @param int $page Current pagination number
 	 * @return void
@@ -173,11 +182,14 @@ class Japh_Favorite_Plugins {
 	function install_plugins_favorites( $page = 1 ) {
 		$this->username = isset( $_REQUEST['user'] ) ? stripslashes( $_REQUEST['user'] ) : $this->username;
 		?>
-			<h4><?php _e( 'Find Favorite Plugins for a WordPress.org username:' ); ?></h4>
-			<form method="post" enctype="multipart/form-data" action="<?php echo self_admin_url( 'plugin-install.php?tab=favorites' ); ?>">
-				<label class="screen-reader-text" for="user"><?php _e( 'WordPress.org username' ); ?></label>
-				<input type="search" id="user" name="user" value="<?php echo esc_attr( $this->username ); ?>" />
-				<input type="submit" class="button" value="<?php esc_attr_e( 'Find Favorites' ); ?>" />
+			<p class="install-help"><?php _e( 'If you have marked plugins as favorites on WordPress.org, you can browse them here.' ); ?></p>
+			<form method="get" action="">
+				<input type="hidden" name="tab" value="favorites" />
+				<p>
+					<label for="user"><?php _e( 'Your WordPress.org username:' ); ?></label>
+					<input type="search" id="user" name="user" value="<?php echo esc_attr( $this->username ); ?>" />
+					<input type="submit" class="button" value="<?php esc_attr_e( 'Get Favorites' ); ?>" />
+				</p>
 			</form>
 		<?php
 	}
@@ -211,6 +223,9 @@ class Japh_Favorite_Plugins {
 		switch ( $current_version ) {
 			case '0.1':
 				delete_option( 'jfp_favorite_plugins' );
+			case '0.5':
+				update_user_meta( get_current_user_id(), 'wporg_favorites', get_option( 'jfp_favorite_user' ) );
+				delete_option( 'jfp_favorite_user' );
 		}
 
 		return $this->version;
@@ -218,5 +233,8 @@ class Japh_Favorite_Plugins {
 
 }
 
-// Kick everything into action...
-$japh_favorite_plugins = new Japh_Favorite_Plugins();
+function jfp_execute() {
+	// Kick everything into action...
+	$japh_favorite_plugins = new Japh_Favorite_Plugins();
+}
+add_action( 'admin_init', 'jfp_execute' );
