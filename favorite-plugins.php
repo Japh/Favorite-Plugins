@@ -3,7 +3,7 @@
 Plugin Name: Favorite Plugins
 Plugin URI: http://japh.wordpress.com/plugins/favorite-plugins
 Description: Quickly and easily access and install your favorited plugins from WordPress.org, right from your dashboard.
-Version: 0.6
+Version: 0.7
 Author: Japh
 Author URI: http://japh.wordpress.com
 License: GPL2
@@ -35,25 +35,10 @@ License: GPL2
  * @author Japh <wordpress@japh.com.au>
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.6
+ * @version 0.7
  * @link http://japh.wordpress.com/plugins/favorite-plugins
  * @since 0.1
  */
-
-// Plugin folder URL
-if ( ! defined( 'JFP_PLUGIN_URL' ) ) {
-	define( 'JFP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-}
-
-// Plugin folder path
-if ( ! defined(' JFP_PLUGIN_DIR' ) ) {
-	define( 'JFP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-}
-
-// Plugin base file
-if ( ! defined( 'JFP_PLUGIN_FILE' ) ) {
-	define( 'JFP_PLUGIN_FILE', __FILE__ );
-}
 
 /**
  * Main class for the Favourite Plugins plugin
@@ -61,12 +46,12 @@ if ( ! defined( 'JFP_PLUGIN_FILE' ) ) {
  * @package JaphFavoritePlugins
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.6
+ * @version 0.7
  * @since 0.1
  */
 class Japh_Favorite_Plugins {
 
-	public $version = '0.6';
+	public $version = '0.7';
 	public $username = null;
 
 	/**
@@ -84,11 +69,11 @@ class Japh_Favorite_Plugins {
 				update_option( 'jfp_favourite_plugins_version', $this->do_update( $current_version ) );
 			}
 
-			add_action( 'init', array( &$this, 'textdomain' ) );
-			add_filter( 'install_plugins_tabs', array( &$this, 'add_favorites_tab' ) );
+			add_action( 'init', array( $this, 'textdomain' ) );
+			add_filter( 'install_plugins_tabs', array( $this, 'add_favorites_tab' ) );
 
-			add_action( 'install_plugins_pre_favorites', array( &$this, 'do_favorites_tab' ) );
-			add_action( 'install_plugins_favorites', array( &$this, 'install_plugins_favorites' ), 10, 1 );
+			add_action( 'install_plugins_pre_favorites', array( $this, 'do_favorites_tab' ) );
+			add_action( 'install_plugins_favorites', array( $this, 'install_plugins_favorites' ), 10, 1 );
 			add_action( 'install_plugins_favorites', 'display_plugins_table');
 
 			$this->username = get_user_option( 'wporg_favorites' );
@@ -145,12 +130,14 @@ class Japh_Favorite_Plugins {
 	 * @return void
 	 */
 	function do_favorites_tab() {
-		global $wp_list_table;
+		global $wp_list_table, $paged;
 
 		$this->username = isset( $_REQUEST['user'] ) ? stripslashes( $_REQUEST['user'] ) : $this->username;
 
 		if ( $this->username ) {
-			$args = array( 'user' => $this->username );
+			$per_page = 30;
+
+			$args = array( 'user' => $this->username, 'page' => $paged, 'per_page' => $per_page );
 			update_user_meta( get_current_user_id(), 'wporg_favorites', $this->username );
 
 			$api = plugins_api( 'query_plugins', $args );
@@ -159,7 +146,7 @@ class Japh_Favorite_Plugins {
 			$wp_list_table->set_pagination_args(
 				array(
 					'total_items' => $api->info['results'],
-					'per_page' => 24,
+					'per_page' => $per_page,
 				)
 			);
 		} else {
@@ -203,7 +190,7 @@ class Japh_Favorite_Plugins {
 	function textdomain() {
 
 		// Setup plugin's language directory and filter
-		$jfp_language_directory = dirname( plugin_basename( JFP_PLUGIN_FILE ) ) . DIRECTORY_SEPARATOR . 'languages' . DIRECTORY_SEPARATOR;
+		$jfp_language_directory = dirname( plugin_basename( __FILE__ ) ) . DIRECTORY_SEPARATOR . 'languages' . DIRECTORY_SEPARATOR;
 		$jfp_language_directory = apply_filters( 'jfp_language_directory', $jfp_language_directory );
 
 		// Load translations

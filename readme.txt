@@ -43,6 +43,11 @@ Not to worry, the 'Favorites' tab will show you if you already have one of your 
 
 == Changelog ==
 
+= 0.7 =
+* Fixed pagination issues. Props to @wpriley and @dadib for reporting
+* Changed from default of 24 per page to 30 to be in line with WordPress defaults
+* Switched from pass-by-reference to pass-by-value for forward compatibility
+
 = 0.6 =
 * Moved screenshot to assets directory to make plugin download smaller
 * Removed vestigial /lib directory
