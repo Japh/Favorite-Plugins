@@ -1,13 +1,13 @@
 === Favorite Plugins ===
-Contributors: japh
+Contributors: japh, mirkolofio
 Tags: favorite, plugins, install
 Requires at least: 3.4
-Tested up to: 3.4.2
-Stable tag: 0.7
+Tested up to: 3.8.1
+Stable tag: 0.8
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Quickly and easily access and install your favorited plugins from WordPress.org, right from your dashboard.
+Quickly and easily access, search and install your favorited plugins from WordPress.org, right from your dashboard.
 
 == Description ==
 
@@ -33,6 +33,10 @@ Installation is easy, just follow these steps:
 
 Certainly! Simply enter the other user's username into the field instead, click 'Get Favorites', and you'll see their favorite plugins.
 
+= Can I filter user's favorite plugins by search? =
+
+Of course! It adds a specific field for this, so it's more useful than the original Favorite tab!
+
 = What if I already have some of my favorite plugins installed? =
 
 Not to worry, the 'Favorites' tab will show you if you already have one of your favorite plugins installed. In fact, it'll even let you know if the installed version is out of date.
@@ -42,6 +46,10 @@ Not to worry, the 'Favorites' tab will show you if you already have one of your 
 1. The new 'Favorites' tab
 
 == Changelog ==
+
+= 0.8 =
+* It replaces the Wordpress.org provided Favorites tab
+* Search filter in Favorites
 
 = 0.7 =
 * Fixed pagination issues. Props to @wpriley and @dadib for reporting
