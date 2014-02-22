@@ -35,7 +35,7 @@ License: GPL2
  * @author Japh <wordpress@japh.com.au>
  * @copyright 2012 Japh
  * @license http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt GPL2
- * @version 0.71
+ * @version 0.8
  * @link http://japh.wordpress.com/plugins/favorite-plugins
  * @since 0.1
  */
